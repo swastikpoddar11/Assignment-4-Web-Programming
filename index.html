@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Capital Explorer</title>
+    
+    <!-- jsVectorMap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/css/jsvectormap.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --capital-color: #f43f5e; /* Custom Color for Capital */
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            margin-top: 5vh;
+            text-align: center;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 18px;
+            font-weight: 300;
+            margin: 0;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 95%;
+            max-width: 1200px;
+            margin-top: 40px;
+            gap: 30px;
+        }
+
+        .map-wrapper {
+            width: 100%;
+            height: 55vh;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            position: relative;
+        }
+
+        #world-map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .info-panel {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 30px 50px;
+            border-radius: 20px;
+            text-align: center;
+            min-width: 300px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .info-panel:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(244, 63, 94, 0.1);
+        }
+
+        .country-name {
+            font-size: 20px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 500;
+        }
+
+        /* 
+           REQUESTED CSS:
+           Custom properties for the font of the capital (color, bold, font size) 
+        */
+        .capital-name {
+            color: var(--capital-color);  /* Custom Color */
+            font-weight: 800;             /* Bold */
+            font-size: 38px;              /* Font Size */
+            margin: 0;
+            text-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+            line-height: 1.2;
+        }
+
+        .placeholder {
+            color: #64748b;
+            font-style: italic;
+            font-size: 18px;
+            font-weight: 300;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--accent);
+            font-size: 18px;
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+        /* jsVectorMap tooltip styling */
+        .jvm-tooltip {
+            font-family: 'Outfit', sans-serif;
+            background-color: rgba(15, 23, 42, 0.9);
+            color: white;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-transition {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Global Capital Explorer</h1>
+        <p class="subtitle">Hover and click on any country on the map to discover its capital</p>
+    </div>
+
+    <div class="main-container">
+        <div class="map-wrapper">
+            <div id="loading-indicator" class="loading">Loading Map Data...</div>
+            <div id="world-map"></div>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <div class="country-name fade-transition" id="countryDisplay">World</div>
+            <div id="capitalDisplay" class="placeholder fade-transition">Select a country on the map</div>
+        </div>
+    </div>
+
+    <!-- jsVectorMap Core and World Map Data -->
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/js/jsvectormap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Hardcoded data to avoid CORS/fetching issues
+            const countriesData = {
+                "AF":{"name":"Afghanistan","capital":"Kabul"},"AX":{"name":"Åland Islands","capital":"Mariehamn"},"AL":{"name":"Albania","capital":"Tirana"},"DZ":{"name":"Algeria","capital":"Algiers"},"AS":{"name":"American Samoa","capital":"Pago Pago"},"AD":{"name":"Andorra","capital":"Andorra la Vella"},"AO":{"name":"Angola","capital":"Luanda"},"AI":{"name":"Anguilla","capital":"The Valley"},"AQ":{"name":"Antarctica","capital":""},"AG":{"name":"Antigua and Barbuda","capital":"Saint John's"},"AR":{"name":"Argentina","capital":"Buenos Aires"},"AM":{"name":"Armenia","capital":"Yerevan"},"AW":{"name":"Aruba","capital":"Oranjestad"},"AU":{"name":"Australia","capital":"Canberra"},"AT":{"name":"Austria","capital":"Vienna"},"AZ":{"name":"Azerbaijan","capital":"Baku"},"BS":{"name":"Bahamas","capital":"Nassau"},"BH":{"name":"Bahrain","capital":"Manama"},"BD":{"name":"Bangladesh","capital":"Dhaka"},"BB":{"name":"Barbados","capital":"Bridgetown"},"BY":{"name":"Belarus","capital":"Minsk"},"BE":{"name":"Belgium","capital":"Brussels"},"BZ":{"name":"Belize","capital":"Belmopan"},"BJ":{"name":"Benin","capital":"Porto-Novo"},"BM":{"name":"Bermuda","capital":"Hamilton"},"BT":{"name":"Bhutan","capital":"Thimphu"},"BO":{"name":"Bolivia","capital":"Sucre"},"BQ":{"name":"Bonaire, Sint Eustatius and Saba","capital":"Kralendijk"},"BA":{"name":"Bosnia and Herzegovina","capital":"Sarajevo"},"BW":{"name":"Botswana","capital":"Gaborone"},"BV":{"name":"Bouvet Island","capital":""},"BR":{"name":"Brazil","capital":"Brasília"},"IO":{"name":"British Indian Ocean Territory","capital":"Diego Garcia"},"BN":{"name":"Brunei Darussalam","capital":"Bandar Seri Begawan"},"BG":{"name":"Bulgaria","capital":"Sofia"},"BF":{"name":"Burkina Faso","capital":"Ouagadougou"},"BI":{"name":"Burundi","capital":"Gitega"},"CV":{"name":"Cabo Verde","capital":"Praia"},"KH":{"name":"Cambodia","capital":"Phnom Penh"},"CM":{"name":"Cameroon","capital":"Yaoundé"},"CA":{"name":"Canada","capital":"Ottawa"},"KY":{"name":"Cayman Islands","capital":"George Town"},"CF":{"name":"Central African Republic","capital":"Bangui"},"TD":{"name":"Chad","capital":"N'Djamena"},"CL":{"name":"Chile","capital":"Santiago"},"CN":{"name":"China","capital":"Beijing"},"CX":{"name":"Christmas Island","capital":"Flying Fish Cove"},"CC":{"name":"Cocos (Keeling) Islands","capital":"West Island"},"CO":{"name":"Colombia","capital":"Bogotá"},"KM":{"name":"Comoros","capital":"Moroni"},"CG":{"name":"Congo","capital":"Brazzaville"},"CD":{"name":"Congo (Democratic Republic of the)","capital":"Kinshasa"},"CK":{"name":"Cook Islands","capital":"Avarua"},"CR":{"name":"Costa Rica","capital":"San José"},"CI":{"name":"Côte d'Ivoire","capital":"Yamoussoukro"},"HR":{"name":"Croatia","capital":"Zagreb"},"CU":{"name":"Cuba","capital":"Havana"},"CW":{"name":"Curaçao","capital":"Willemstad"},"CY":{"name":"Cyprus","capital":"Nicosia"},"CZ":{"name":"Czechia","capital":"Prague"},"DK":{"name":"Denmark","capital":"Copenhagen"},"DJ":{"name":"Djibouti","capital":"Djibouti"},"DM":{"name":"Dominica","capital":"Roseau"},"DO":{"name":"Dominican Republic","capital":"Santo Domingo"},"EC":{"name":"Ecuador","capital":"Quito"},"EG":{"name":"Egypt","capital":"Cairo"},"SV":{"name":"El Salvador","capital":"San Salvador"},"GQ":{"name":"Equatorial Guinea","capital":"Malabo"},"ER":{"name":"Eritrea","capital":"Asmara"},"EE":{"name":"Estonia","capital":"Tallinn"},"SZ":{"name":"Eswatini","capital":"Mbabane"},"ET":{"name":"Ethiopia","capital":"Addis Ababa"},"FK":{"name":"Falkland Islands (Malvinas)","capital":"Stanley"},"FO":{"name":"Faroe Islands","capital":"Tórshavn"},"FJ":{"name":"Fiji","capital":"Suva"},"FI":{"name":"Finland","capital":"Helsinki"},"FR":{"name":"France","capital":"Paris"},"GF":{"name":"French Guiana","capital":"Cayenne"},"PF":{"name":"French Polynesia","capital":"Papeetē"},"TF":{"name":"French Southern Territories","capital":"Port-aux-Français"},"GA":{"name":"Gabon","capital":"Libreville"},"GM":{"name":"Gambia","capital":"Banjul"},"GE":{"name":"Georgia","capital":"Tbilisi"},"DE":{"name":"Germany","capital":"Berlin"},"GH":{"name":"Ghana","capital":"Accra"},"GI":{"name":"Gibraltar","capital":"Gibraltar"},"GR":{"name":"Greece","capital":"Athens"},"GL":{"name":"Greenland","capital":"Nuuk"},"GD":{"name":"Grenada","capital":"St. George's"},"GP":{"name":"Guadeloupe","capital":"Basse-Terre"},"GU":{"name":"Guam","capital":"Hagåtña"},"GT":{"name":"Guatemala","capital":"Guatemala City"},"GG":{"name":"Guernsey","capital":"St. Peter Port"},"GN":{"name":"Guinea","capital":"Conakry"},"GW":{"name":"Guinea-Bissau","capital":"Bissau"},"GY":{"name":"Guyana","capital":"Georgetown"},"HT":{"name":"Haiti","capital":"Port-au-Prince"},"HM":{"name":"Heard Island and McDonald Islands","capital":""},"VA":{"name":"Holy See","capital":"Vatican City"},"HN":{"name":"Honduras","capital":"Tegucigalpa"},"HK":{"name":"Hong Kong","capital":"Hong Kong"},"HU":{"name":"Hungary","capital":"Budapest"},"IS":{"name":"Iceland","capital":"Reykjavík"},"IN":{"name":"India","capital":"New Delhi"},"ID":{"name":"Indonesia","capital":"Jakarta"},"IR":{"name":"Iran","capital":"Tehran"},"IQ":{"name":"Iraq","capital":"Baghdad"},"IE":{"name":"Ireland","capital":"Dublin"},"IM":{"name":"Isle of Man","capital":"Douglas"},"IL":{"name":"Israel","capital":"Jerusalem"},"IT":{"name":"Italy","capital":"Rome"},"JM":{"name":"Jamaica","capital":"Kingston"},"JP":{"name":"Japan","capital":"Tokyo"},"JE":{"name":"Jersey","capital":"Saint Helier"},"JO":{"name":"Jordan","capital":"Amman"},"KZ":{"name":"Kazakhstan","capital":"Astana"},"KE":{"name":"Kenya","capital":"Nairobi"},"KI":{"name":"Kiribati","capital":"Tarawa"},"KP":{"name":"North Korea","capital":"Pyongyang"},"KR":{"name":"South Korea","capital":"Seoul"},"KW":{"name":"Kuwait","capital":"Kuwait City"},"KG":{"name":"Kyrgyzstan","capital":"Bishkek"},"LA":{"name":"Laos","capital":"Vientiane"},"LV":{"name":"Latvia","capital":"Riga"},"LB":{"name":"Lebanon","capital":"Beirut"},"LS":{"name":"Lesotho","capital":"Maseru"},"LR":{"name":"Liberia","capital":"Monrovia"},"LY":{"name":"Libya","capital":"Tripoli"},"LI":{"name":"Liechtenstein","capital":"Vaduz"},"LT":{"name":"Lithuania","capital":"Vilnius"},"LU":{"name":"Luxembourg","capital":"Luxembourg"},"MO":{"name":"Macao","capital":"Macao"},"MG":{"name":"Madagascar","capital":"Antananarivo"},"MW":{"name":"Malawi","capital":"Lilongwe"},"MY":{"name":"Malaysia","capital":"Kuala Lumpur"},"MV":{"name":"Maldives","capital":"Malé"},"ML":{"name":"Mali","capital":"Bamako"},"MT":{"name":"Malta","capital":"Valletta"},"MH":{"name":"Marshall Islands","capital":"Majuro"},"MQ":{"name":"Martinique","capital":"Fort-de-France"},"MR":{"name":"Mauritania","capital":"Nouakchott"},"MU":{"name":"Mauritius","capital":"Port Louis"},"YT":{"name":"Mayotte","capital":"Mamoudzou"},"MX":{"name":"Mexico","capital":"Mexico City"},"FM":{"name":"Micronesia","capital":"Palikir"},"MD":{"name":"Moldova","capital":"Chișinău"},"MC":{"name":"Monaco","capital":"Monaco"},"MN":{"name":"Mongolia","capital":"Ulaanbaatar"},"ME":{"name":"Montenegro","capital":"Podgorica"},"MS":{"name":"Montserrat","capital":"Plymouth"},"MA":{"name":"Morocco","capital":"Rabat"},"MZ":{"name":"Mozambique","capital":"Maputo"},"MM":{"name":"Myanmar","capital":"Naypyidaw"},"NA":{"name":"Namibia","capital":"Windhoek"},"NR":{"name":"Nauru","capital":"Yaren"},"NP":{"name":"Nepal","capital":"Kathmandu"},"NL":{"name":"Netherlands","capital":"Amsterdam"},"NC":{"name":"New Caledonia","capital":"Nouméa"},"NZ":{"name":"New Zealand","capital":"Wellington"},"NI":{"name":"Nicaragua","capital":"Managua"},"NE":{"name":"Niger","capital":"Niamey"},"NG":{"name":"Nigeria","capital":"Abuja"},"NU":{"name":"Niue","capital":"Alofi"},"NF":{"name":"Norfolk Island","capital":"Kingston"},"MP":{"name":"Northern Mariana Islands","capital":"Saipan"},"NO":{"name":"Norway","capital":"Oslo"},"OM":{"name":"Oman","capital":"Muscat"},"PK":{"name":"Pakistan","capital":"Islamabad"},"PW":{"name":"Palau","capital":"Ngerulmud"},"PS":{"name":"Palestine","capital":"Ramallah"},"PA":{"name":"Panama","capital":"Panama City"},"PG":{"name":"Papua New Guinea","capital":"Port Moresby"},"PY":{"name":"Paraguay","capital":"Asunción"},"PE":{"name":"Peru","capital":"Lima"},"PH":{"name":"Philippines","capital":"Manila"},"PN":{"name":"Pitcairn","capital":"Adamstown"},"PL":{"name":"Poland","capital":"Warsaw"},"PT":{"name":"Portugal","capital":"Lisbon"},"PR":{"name":"Puerto Rico","capital":"San Juan"},"QA":{"name":"Qatar","capital":"Doha"},"RE":{"name":"Réunion","capital":"Saint-Denis"},"RO":{"name":"Romania","capital":"Bucharest"},"RU":{"name":"Russia","capital":"Moscow"},"RW":{"name":"Rwanda","capital":"Kigali"},"BL":{"name":"Saint Barthélemy","capital":"Gustavia"},"SH":{"name":"Saint Helena, Ascension and Tristan da Cunha","capital":"Jamestown"},"KN":{"name":"Saint Kitts and Nevis","capital":"Basseterre"},"LC":{"name":"Saint Lucia","capital":"Castries"},"MF":{"name":"Saint Martin (French part)","capital":"Marigot"},"PM":{"name":"Saint Pierre and Miquelon","capital":"Saint-Pierre"},"VC":{"name":"Saint Vincent and the Grenadines","capital":"Kingstown"},"WS":{"name":"Samoa","capital":"Apia"},"SM":{"name":"San Marino","capital":"San Marino"},"ST":{"name":"Sao Tome and Principe","capital":"São Tomé"},"SA":{"name":"Saudi Arabia","capital":"Riyadh"},"SN":{"name":"Senegal","capital":"Dakar"},"RS":{"name":"Serbia","capital":"Belgrade"},"SC":{"name":"Seychelles","capital":"Victoria"},"SL":{"name":"Sierra Leone","capital":"Freetown"},"SG":{"name":"Singapore","capital":"Singapore"},"SX":{"name":"Sint Maarten (Dutch part)","capital":"Philipsburg"},"SK":{"name":"Slovakia","capital":"Bratislava"},"SI":{"name":"Slovenia","capital":"Ljubljana"},"SB":{"name":"Solomon Islands","capital":"Honiara"},"SO":{"name":"Somalia","capital":"Mogadishu"},"ZA":{"name":"South Africa","capital":"Pretoria"},"GS":{"name":"South Georgia and the South Sandwich Islands","capital":"King Edward Point"},"SS":{"name":"South Sudan","capital":"Juba"},"ES":{"name":"Spain","capital":"Madrid"},"LK":{"name":"Sri Lanka","capital":"Sri Jayawardenepura Kotte"},"SD":{"name":"Sudan","capital":"Khartoum"},"SR":{"name":"Suriname","capital":"Paramaribo"},"SJ":{"name":"Svalbard and Jan Mayen","capital":"Longyearbyen"},"SE":{"name":"Sweden","capital":"Stockholm"},"CH":{"name":"Switzerland","capital":"Bern"},"SY":{"name":"Syria","capital":"Damascus"},"TW":{"name":"Taiwan","capital":"Taipei"},"TJ":{"name":"Tajikistan","capital":"Dushanbe"},"TZ":{"name":"Tanzania","capital":"Dodoma"},"TH":{"name":"Thailand","capital":"Bangkok"},"TL":{"name":"Timor-Leste","capital":"Dili"},"TG":{"name":"Togo","capital":"Lomé"},"TK":{"name":"Tokelau","capital":"Fakaofo"},"TO":{"name":"Tonga","capital":"Nukuʻalofa"},"TT":{"name":"Trinidad and Tobago","capital":"Port of Spain"},"TN":{"name":"Tunisia","capital":"Tunis"},"TR":{"name":"Turkey","capital":"Ankara"},"TM":{"name":"Turkmenistan","capital":"Ashgabat"},"TC":{"name":"Turks and Caicos Islands","capital":"Cockburn Town"},"TV":{"name":"Tuvalu","capital":"Funafuti"},"UG":{"name":"Uganda","capital":"Kampala"},"UA":{"name":"Ukraine","capital":"Kyiv"},"AE":{"name":"United Arab Emirates","capital":"Abu Dhabi"},"GB":{"name":"United Kingdom","capital":"London"},"US":{"name":"United States","capital":"Washington, D.C."},"UY":{"name":"Uruguay","capital":"Montevideo"},"UZ":{"name":"Uzbekistan","capital":"Tashkent"},"VU":{"name":"Vanuatu","capital":"Port Vila"},"VE":{"name":"Venezuela","capital":"Caracas"},"VN":{"name":"Vietnam","capital":"Hanoi"},"VG":{"name":"British Virgin Islands","capital":"Road Town"},"VI":{"name":"U.S. Virgin Islands","capital":"Charlotte Amalie"},"WF":{"name":"Wallis and Futuna","capital":"Mata-Utu"},"EH":{"name":"Western Sahara","capital":"Laayoune"},"YE":{"name":"Yemen","capital":"Sana'a"},"ZM":{"name":"Zambia","capital":"Lusaka"},"ZW":{"name":"Zimbabwe","capital":"Harare"}
+            };
+
+            document.getElementById('loading-indicator').style.display = 'none';
+
+            // Initialize Map
+            const map = new jsVectorMap({
+                selector: "#world-map",
+                map: "world",
+                backgroundColor: "transparent",
+                zoomOnScroll: true,
+                regionStyle: {
+                    initial: {
+                        fill: "#334155",
+                        stroke: "#0f172a",
+                        strokeWidth: 0.5,
+                        fillOpacity: 1
+                    },
+                    hover: {
+                        fill: "#38bdf8",
+                        fillOpacity: 0.8,
+                        cursor: 'pointer'
+                    },
+                    selected: {
+                        fill: "#f43f5e"
+                    }
+                },
+                onRegionTooltipShow(event, tooltip, code) {
+                    const countryInfo = countriesData[code];
+                    if (countryInfo) {
+                        tooltip.text(countryInfo.name);
+                    }
+                },
+                onRegionClick: function(event, code) {
+                    const countryInfo = countriesData[code];
+                    
+                    if (countryInfo) {
+                        const countryDisplay = document.getElementById("countryDisplay");
+                        const capitalDisplay = document.getElementById("capitalDisplay");
+
+                        // Fade out
+                        countryDisplay.style.opacity = '0';
+                        capitalDisplay.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            // Update content
+                            countryDisplay.textContent = countryInfo.name;
+                            capitalDisplay.textContent = countryInfo.capital;
+                            
+                            // Apply the requested CSS class for styling the capital
+                            capitalDisplay.className = "capital-name fade-transition"; 
+                            
+                            // Fade back in
+                            countryDisplay.style.opacity = '1';
+                            capitalDisplay.style.opacity = '1';
+                        }, 300);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
